@@ -14,28 +14,21 @@ export function drawLayout(canvas, paper, images, imageSize, layoutMode = 'manua
   canvas.height = canvasHeight;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-  // Apply page margins/padding from PaperSettings
-  const padding = paperSettings.padding || { top: 0, bottom: 0, left: 0, right: 0 };
-  const availableWidth = canvasWidth - inchToPx(padding.left + padding.right);
-  const availableHeight = canvasHeight - inchToPx(padding.top + padding.bottom);
-  const offsetX = inchToPx(padding.left);
-  const offsetY = inchToPx(padding.top);
-
-  // Image spacing between images (not margins from edges)
-  const imageSpacing = inchToPx(paperSettings.imageSpacing || 0);
-
   let imgW, imgH, cols, rows, totalImages;
 
   if (layoutMode === 'auto') {
     // AUTO MODE: Create perfect grid based on imagesPerPage count
+    // Calculate optimal grid dimensions
     cols = Math.ceil(Math.sqrt(imagesPerPage));
     rows = Math.ceil(imagesPerPage / cols);
     
+    // Show only the specified number of images (or available images if less)
     totalImages = Math.min(images.length, imagesPerPage);
     
-    // Calculate image size accounting for spacing between images
-    imgW = (availableWidth - (cols - 1) * imageSpacing) / cols;
-    imgH = (availableHeight - (rows - 1) * imageSpacing) / rows;
+    // Calculate image size to perfectly fill the grid
+    // Divide canvas into equal grid cells with small margins
+    imgW = (canvasWidth / cols) * 0.9; // 90% of cell width for margins
+    imgH = (canvasHeight / rows) * 0.9; // 90% of cell height for margins
     
     // Make images square in auto mode
     const minDimension = Math.min(imgW, imgH);
@@ -45,11 +38,15 @@ export function drawLayout(canvas, paper, images, imageSize, layoutMode = 'manua
     cols = paperSettings.columns || 4;
     rows = paperSettings.rows || 2;
     
-    totalImages = Math.min(images.length, rows * cols);
+    // Total images that can fit in this grid
+    const gridCapacity = rows * cols;
+    totalImages = Math.min(images.length, gridCapacity);
     
-    // Calculate image size accounting for spacing between images
-    imgW = (availableWidth - (cols - 1) * imageSpacing) / cols;
-    imgH = (availableHeight - (rows - 1) * imageSpacing) / rows;
+    // Calculate image size to perfectly fill the specified grid
+    // Use margin setting if provided
+    const marginFactor = paperSettings.margin ? (1 - paperSettings.margin / 2) : 0.9;
+    imgW = (canvasWidth / cols) * marginFactor;
+    imgH = (canvasHeight / rows) * marginFactor;
     
     // Keep images square in grid mode for consistency
     const minDimension = Math.min(imgW, imgH);
@@ -59,20 +56,24 @@ export function drawLayout(canvas, paper, images, imageSize, layoutMode = 'manua
     imgW = inchToPx(imageSize.width);
     imgH = inchToPx(imageSize.height);
     
-    const maxCols = Math.floor((availableWidth + imageSpacing) / (imgW + imageSpacing));
-    const maxRows = Math.floor((availableHeight + imageSpacing) / (imgH + imageSpacing));
+    const maxCols = Math.floor(canvasWidth / imgW);
+    const maxRows = Math.floor(canvasHeight / imgH);
     totalImages = Math.min(images.length, maxCols * maxRows);
     
     cols = maxCols;
     rows = Math.ceil(totalImages / cols);
   }
 
+  // Calculate spacing to center the grid
+  const hSpacing = (canvasWidth - cols * imgW) / (cols + 1);
+  const vSpacing = (canvasHeight - rows * imgH) / (rows + 1);
+
   images.slice(0, totalImages).forEach((src, index) => {
     const col = index % cols;
     const row = Math.floor(index / cols);
 
-    const x = offsetX + col * (imgW + imageSpacing);
-    const y = offsetY + row * (imgH + imageSpacing);
+    const x = hSpacing + col * (imgW + hSpacing);
+    const y = vSpacing + row * (imgH + vSpacing);
 
     const img = new Image();
     img.src = src;
@@ -92,28 +93,21 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
 
-  // Apply page margins/padding from PaperSettings
-  const padding = paperSettings.padding || { top: 0, bottom: 0, left: 0, right: 0 };
-  const availableWidth = pageWidth - (padding.left + padding.right);
-  const availableHeight = pageHeight - (padding.top + padding.bottom);
-  const offsetX = padding.left;
-  const offsetY = padding.top;
-
-  // Image spacing between images (not margins from edges)
-  const imageSpacing = paperSettings.imageSpacing || 0;
-
   let imgW, imgH, cols, rows, perPage;
 
   if (layoutMode === 'auto') {
     // AUTO MODE: Create perfect grid based on imagesPerPage count
+    // Calculate optimal grid dimensions
     cols = Math.ceil(Math.sqrt(imagesPerPage));
     rows = Math.ceil(imagesPerPage / cols);
     
+    // Each page will have exactly imagesPerPage slots
     perPage = imagesPerPage;
     
-    // Calculate image size accounting for spacing between images
-    imgW = (availableWidth - (cols - 1) * imageSpacing) / cols;
-    imgH = (availableHeight - (rows - 1) * imageSpacing) / rows;
+    // Calculate image size to perfectly fill the grid
+    // Divide page into equal grid cells with small margins
+    imgW = (pageWidth / cols) * 0.9; // 90% of cell width for margins
+    imgH = (pageHeight / rows) * 0.9; // 90% of cell height for margins
     
     // Make images square in auto mode
     const minDimension = Math.min(imgW, imgH);
@@ -123,11 +117,14 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
     cols = paperSettings.columns || 4;
     rows = paperSettings.rows || 2;
     
+    // Each page will have exactly rows × cols slots
     perPage = rows * cols;
     
-    // Calculate image size accounting for spacing between images
-    imgW = (availableWidth - (cols - 1) * imageSpacing) / cols;
-    imgH = (availableHeight - (rows - 1) * imageSpacing) / rows;
+    // Calculate image size to perfectly fill the specified grid
+    // Use margin setting if provided
+    const marginFactor = paperSettings.margin ? (1 - paperSettings.margin / 2) : 0.9;
+    imgW = (pageWidth / cols) * marginFactor;
+    imgH = (pageHeight / rows) * marginFactor;
     
     // Keep images square in grid mode for consistency
     const minDimension = Math.min(imgW, imgH);
@@ -137,13 +134,17 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
     imgW = imageSize.width;
     imgH = imageSize.height;
     
-    const maxCols = Math.floor((availableWidth + imageSpacing) / (imgW + imageSpacing));
-    const maxRows = Math.floor((availableHeight + imageSpacing) / (imgH + imageSpacing));
+    const maxCols = Math.floor(pageWidth / imgW);
+    const maxRows = Math.floor(pageHeight / imgH);
     perPage = maxCols * maxRows;
     
     cols = maxCols;
     rows = maxRows;
   }
+
+  // Calculate spacing to center the grid
+  const hSpacing = (pageWidth - cols * imgW) / (cols + 1);
+  const vSpacing = (pageHeight - rows * imgH) / (rows + 1);
 
   images.forEach((src, index) => {
     const pageIndex = Math.floor(index / perPage);
@@ -152,8 +153,8 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
     const row = Math.floor(indexInPage / cols);
     const col = indexInPage % cols;
 
-    const x = offsetX + col * (imgW + imageSpacing);
-    const y = offsetY + row * (imgH + imageSpacing);
+    const x = hSpacing + col * (imgW + hSpacing);
+    const y = vSpacing + row * (imgH + vSpacing);
 
     // Add new page if needed (but not for the first image)
     if (indexInPage === 0 && index !== 0) {

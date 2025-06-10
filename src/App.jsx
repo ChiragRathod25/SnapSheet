@@ -9,7 +9,7 @@ export default function App() {
  const [paperSettings, setPaperSettings] = useState({
   size: 'a4',
   orientation: 'portrait',
-  padding: { top: 0.5, bottom: 0.5, left: 0.5, right: 0.5 },
+  padding: { top: 0.1, bottom: 0.1, left: 0.1, right: 0.1 },
   imageSpacing: 0.15,
   backgroundColor: '#ffffff',
   showGridLines: false
