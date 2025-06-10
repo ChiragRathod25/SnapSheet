@@ -47,7 +47,7 @@ export default function LayoutModeToggle({ mode, setMode, imagesPerPage, setImag
         <input
           type="number"
           className="border p-2"
-          value={paperSettings.margin || 0.00}
+          value={paperSettings.margin || 0.15}
           onChange={e => setPaperSettings({ ...paperSettings, margin: +e.target.value })}
         />
       </div>

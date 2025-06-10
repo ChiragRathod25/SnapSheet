@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 
 const DPI = 96;
 const inchToPx = inch => inch * DPI;
+
 export function drawLayout(canvas, paper, images, imageSize, layoutMode = 'manual', imagesPerPage = 8) {
   const widthInch = paper.orientation === 'portrait' ? 8.27 : 11.69;
   const heightInch = paper.orientation === 'portrait' ? 11.69 : 8.27;
@@ -24,35 +25,30 @@ export function drawLayout(canvas, paper, images, imageSize, layoutMode = 'manua
     imgH = inchToPx(imageSize.height);
   }
 
-  const hSpacing = inchToPx(paper.hSpacing || 0.1);
-  const vSpacing = inchToPx(paper.vSpacing || 0.1);
+  const maxCols = Math.floor(canvasWidth / imgW);
+  const maxRows = Math.floor(canvasHeight / imgH);
+  const totalImages = Math.min(images.length, maxCols * maxRows);
 
-  const imagesPerRow = Math.floor((canvasWidth + hSpacing) / (imgW + hSpacing));
-  const numRows = Math.ceil(images.length / imagesPerRow);
+  const cols = maxCols;
+  const rows = Math.ceil(totalImages / cols);
 
-  const totalContentWidth = imagesPerRow * imgW + (imagesPerRow - 1) * hSpacing;
-  const totalContentHeight = numRows * imgH + (numRows - 1) * vSpacing;
+  const hSpacing = (canvasWidth - cols * imgW) / (cols + 1);
+  const vSpacing = (canvasHeight - rows * imgH) / (rows + 1);
 
-  const offsetX = (canvasWidth - totalContentWidth) / 2;
-  const offsetY = (canvasHeight - totalContentHeight) / 2;
+  images.slice(0, totalImages).forEach((src, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
 
-  images.forEach((src, index) => {
+    const x = hSpacing + col * (imgW + hSpacing);
+    const y = vSpacing + row * (imgH + vSpacing);
+
     const img = new Image();
     img.src = src;
     img.onload = () => {
-      const row = Math.floor(index / imagesPerRow);
-      const col = index % imagesPerRow;
-      const x = offsetX + col * (imgW + hSpacing);
-      const y = offsetY + row * (imgH + vSpacing);
-      if (x + imgW <= canvasWidth && y + imgH <= canvasHeight) {
-        ctx.drawImage(img, x, y, imgW, imgH);
-      }
+      ctx.drawImage(img, x, y, imgW, imgH);
     };
   });
 }
-
-
-
 
 export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual', imagesPerPage = 8) {
   const pdf = new jsPDF({
@@ -61,12 +57,12 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
     format: paper.size,
   });
 
-  const width = pdf.internal.pageSize.getWidth();
-  const height = pdf.internal.pageSize.getHeight();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
 
   let imgW, imgH;
   if (layoutMode === 'auto') {
-    const totalArea = width * height;
+    const totalArea = pageWidth * pageHeight;
     const estimatedSize = Math.sqrt(totalArea / imagesPerPage);
     imgW = estimatedSize;
     imgH = estimatedSize;
@@ -75,29 +71,25 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
     imgH = imageSize.height;
   }
 
-  const hSpacing = paper.hSpacing || 0.1;
-  const vSpacing = paper.vSpacing || 0.1;
+  const maxCols = Math.floor(pageWidth / imgW);
+  const maxRows = Math.floor(pageHeight / imgH);
+  const perPage = maxCols * maxRows;
 
-  const imagesPerRow = Math.floor((width + hSpacing) / (imgW + hSpacing));
-  const imagesPerCol = Math.floor((height + vSpacing) / (imgH + vSpacing));
-  const imagesPerPageCalc = imagesPerRow * imagesPerCol;
-
-  const totalContentWidth = imagesPerRow * imgW + (imagesPerRow - 1) * hSpacing;
-  const totalContentHeight = imagesPerCol * imgH + (imagesPerCol - 1) * vSpacing;
-
-  const offsetX = (width - totalContentWidth) / 2;
-  const offsetY = (height - totalContentHeight) / 2;
+  const hSpacing = (pageWidth - maxCols * imgW) / (maxCols + 1);
+  const vSpacing = (pageHeight - maxRows * imgH) / (maxRows + 1);
 
   images.forEach((src, index) => {
-    const pageIndex = Math.floor(index / imagesPerPageCalc);
-    const positionInPage = index % imagesPerPageCalc;
-    const row = Math.floor(positionInPage / imagesPerRow);
-    const col = positionInPage % imagesPerRow;
+    const pageIndex = Math.floor(index / perPage);
+    const indexInPage = index % perPage;
 
-    const x = offsetX + col * (imgW + hSpacing);
-    const y = offsetY + row * (imgH + vSpacing);
+    const row = Math.floor(indexInPage / maxCols);
+    const col = indexInPage % maxCols;
 
-    if (positionInPage === 0 && index !== 0) pdf.addPage();
+    const x = hSpacing + col * (imgW + hSpacing);
+    const y = vSpacing + row * (imgH + vSpacing);
+
+    if (indexInPage === 0 && index !== 0) pdf.addPage();
+
     pdf.addImage(src, 'JPEG', x, y, imgW, imgH);
   });
 
