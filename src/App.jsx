@@ -22,7 +22,7 @@ export default function App() {
   return (
     <div className="p-4 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-4">
-        Passport Photo Layout Generator
+        SnapSheet : Photo Layout Generator
       </h1>
       <PaperSettings settings={paperSettings} setSettings={setPaperSettings} />
       <LayoutModeToggle
