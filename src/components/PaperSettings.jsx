@@ -83,7 +83,7 @@ export default function PaperSettings({ settings, setSettings }) {
       </div>
 
       {/* Background Color */}
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <label className="block mb-2 font-medium">Background Color:</label>
         <div className="flex gap-2 items-center">
           <input
@@ -96,10 +96,10 @@ export default function PaperSettings({ settings, setSettings }) {
             {settings.backgroundColor || '#ffffff'}
           </span>
         </div>
-      </div>
+      </div> */}
 
       {/* Show Grid Lines */}
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -110,6 +110,7 @@ export default function PaperSettings({ settings, setSettings }) {
           <span className="font-medium">Show grid lines (preview only)</span>
         </label>
       </div>
+       */}
     </div>
   );
 }
