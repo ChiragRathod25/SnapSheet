@@ -1,12 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { drawLayout } from '../utils/layoutUtils';
 
-export default function LayoutPreview({ paper, images, imageSize }) {
+export default function LayoutPreview({ paper, images, imageSize, layoutMode, imagesPerPage, paperSettings }) {
   const canvasRef = useRef();
 
   useEffect(() => {
-    drawLayout(canvasRef.current, paper, images, imageSize);
-  }, [paper, images, imageSize]);
+    if (canvasRef.current) {
+      drawLayout(canvasRef.current, paper, images, imageSize, layoutMode, imagesPerPage, paperSettings);
+    }
+  }, [paper, images, imageSize, layoutMode, imagesPerPage, paperSettings]);
 
   return (
     <div className="mt-6">
