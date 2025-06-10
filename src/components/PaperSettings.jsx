@@ -23,7 +23,7 @@ export default function PaperSettings({ settings, setSettings }) {
             key={side}
             type="number"
             step="0.1"
-            value={settings[side] || 0.1}
+            value={settings[side] || 0.0}
             onChange={e => updatePadding(side, e.target.value)}
             className="border p-2"
             placeholder={`${side} padding`}
