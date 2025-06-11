@@ -14,6 +14,12 @@ export function drawLayout(canvas, paper, images, imageSize, layoutMode = 'manua
   canvas.height = canvasHeight;
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
+  // Draw background
+  if (paperSettings.backgroundColor) {
+    ctx.fillStyle = paperSettings.backgroundColor;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+  }
+
   let imgW, imgH, cols, rows, totalImages;
 
   if (layoutMode === 'auto') {
@@ -68,6 +74,30 @@ export function drawLayout(canvas, paper, images, imageSize, layoutMode = 'manua
   const hSpacing = (canvasWidth - cols * imgW) / (cols + 1);
   const vSpacing = (canvasHeight - rows * imgH) / (rows + 1);
 
+  // Draw grid lines if enabled
+  if (paperSettings.showGridLines) {
+    ctx.strokeStyle = paperSettings.gridLineColor || '#cccccc';
+    ctx.lineWidth = 1;
+    
+    // Draw vertical lines
+    for (let i = 0; i <= cols; i++) {
+      const x = hSpacing / 2 + i * (imgW + hSpacing);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasHeight);
+      ctx.stroke();
+    }
+    
+    // Draw horizontal lines
+    for (let i = 0; i <= rows; i++) {
+      const y = vSpacing / 2 + i * (imgH + vSpacing);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasWidth, y);
+      ctx.stroke();
+    }
+  }
+
   images.slice(0, totalImages).forEach((src, index) => {
     const col = index % cols;
     const row = Math.floor(index / cols);
@@ -112,23 +142,6 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
     // Make images square in auto mode
     const minDimension = Math.min(imgW, imgH);
     imgW = imgH = minDimension;
-  } else if (layoutMode === 'grid') {
-    // GRID MODE: Use user-specified rows and columns
-    cols = paperSettings.columns || 4;
-    rows = paperSettings.rows || 2;
-    
-    // Each page will have exactly rows × cols slots
-    perPage = rows * cols;
-    
-    // Calculate image size to perfectly fill the specified grid
-    // Use margin setting if provided
-    const marginFactor = paperSettings.margin ? (1 - paperSettings.margin / 2) : 0.9;
-    imgW = (pageWidth / cols) * marginFactor;
-    imgH = (pageHeight / rows) * marginFactor;
-    
-    // Keep images square in grid mode for consistency
-    const minDimension = Math.min(imgW, imgH);
-    imgW = imgH = minDimension;
   } else {
     // MANUAL MODE: Use user's specified image size
     imgW = imageSize.width;
@@ -146,6 +159,29 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
   const hSpacing = (pageWidth - cols * imgW) / (cols + 1);
   const vSpacing = (pageHeight - rows * imgH) / (rows + 1);
 
+  // Draw grid lines on each page if enabled
+  const drawGridLines = () => {
+    if (paperSettings.showGridLines) {
+      pdf.setDrawColor(paperSettings.gridLineColor || '#cccccc');
+      pdf.setLineWidth(0.01);
+      
+      // Draw vertical lines
+      for (let i = 0; i <= cols; i++) {
+        const x = hSpacing / 2 + i * (imgW + hSpacing);
+        pdf.line(x, 0, x, pageHeight);
+      }
+      
+      // Draw horizontal lines
+      for (let i = 0; i <= rows; i++) {
+        const y = vSpacing / 2 + i * (imgH + vSpacing);
+        pdf.line(0, y, pageWidth, y);
+      }
+    }
+  };
+
+  // Draw grid lines on first page
+  drawGridLines();
+
   images.forEach((src, index) => {
     const pageIndex = Math.floor(index / perPage);
     const indexInPage = index % perPage;
@@ -159,6 +195,15 @@ export function drawLayoutToPDF(paper, images, imageSize, layoutMode = 'manual',
     // Add new page if needed (but not for the first image)
     if (indexInPage === 0 && index !== 0) {
       pdf.addPage();
+      
+      // Add background color to new page if specified
+      if (paperSettings.backgroundColor && paperSettings.backgroundColor !== '#ffffff') {
+        pdf.setFillColor(paperSettings.backgroundColor);
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+      }
+      
+      // Draw grid lines on new page
+      drawGridLines();
     }
 
     pdf.addImage(src, 'JPEG', x, y, imgW, imgH);
